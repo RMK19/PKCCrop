@@ -260,7 +260,7 @@ extension PKCCropViewController: UIScrollViewDelegate{
 
 
 extension PKCCropViewController: PKCCropLineDelegate{
-    func pkcCropLineMask(_ frame: CGRect){
+  public func pkcCropLineMask(_ frame: CGRect){
         var frameValue = frame
         frameValue.origin.y += self.scrollTopConst.constant - 2
         frameValue.origin.x += self.scrollLeadingConst.constant - 2
