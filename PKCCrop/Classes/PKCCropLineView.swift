@@ -21,11 +21,11 @@
 import UIKit
 
 
-protocol PKCCropLineDelegate: class {
+public protocol PKCCropLineDelegate: class {
     func pkcCropLineMask(_ frame: CGRect)
 }
 
-class PKCCropLineView: UIView {
+public class PKCCropLineView: UIView {
     weak var delegate: PKCCropLineDelegate?
 
     private var containerView: UIView!
@@ -66,7 +66,7 @@ class PKCCropLineView: UIView {
         self.commonInitialization()
     }
 
-    required init?(coder aDecoder: NSCoder) {
+  required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         self.commonInitialization()
     }
@@ -153,7 +153,7 @@ class PKCCropLineView: UIView {
 
 
 
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+  override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         if self.leftTopButton.frame.contains(point){
             return true
         }else if self.leftBottomButton.frame.contains(point){
