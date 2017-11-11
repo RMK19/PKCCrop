@@ -110,11 +110,11 @@ public class PKCCropLineView: UIView {
         self.delegate?.pkcCropLineMask(CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.width, height: frame.height))
     }
 
-    func cropSize() -> CGRect{
+    public func cropSize() -> CGRect{
         return self.lineView.frame
     }
 
-    func initLineFrame(){
+    public func initLineFrame(){
         let paddingX = (self.frame.width - PKCCropHelper.shared.minSize - 80 - 2)/2
         let paddingY = (self.frame.height - PKCCropHelper.shared.minSize - 80 - 2)/2
         self.leftConst.constant = paddingX
@@ -123,7 +123,7 @@ public class PKCCropLineView: UIView {
         self.bottomConst.constant = paddingY
     }
 
-    func imageViewSize(_ frame: CGRect){
+    public func imageViewSize(_ frame: CGRect){
         let limitX = frame.origin.x + 2
         let limitY = frame.origin.y + 2
         
