@@ -26,7 +26,7 @@ public protocol PKCCropLineDelegate: class {
 }
 
 public class PKCCropLineView: UIView {
-    weak var delegate: PKCCropLineDelegate?
+    public weak var delegate: PKCCropLineDelegate?
 
     private var containerView: UIView!
 
