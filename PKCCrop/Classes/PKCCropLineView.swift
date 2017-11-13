@@ -22,475 +22,431 @@ import UIKit
 
 
 public protocol PKCCropLineDelegate: class {
-    func pkcCropLineMask(_ frame: CGRect)
+  func pkcCropLineMask(_ frame: CGRect)
 }
 
 public class PKCCropLineView: UIView {
-    public weak var delegate: PKCCropLineDelegate?
+  public weak var delegate: PKCCropLineDelegate?
+  public var cropFrame: CGRect?
+  private var containerView: UIView!
+  private var touchPoint: CGPoint? = nil
 
-    private var containerView: UIView!
+  @IBOutlet private weak var lineView: UIView!
+  @IBOutlet private weak var subLineView: UIView!
 
-    @IBOutlet private weak var lineView: UIView!
-    @IBOutlet private weak var subLineView: UIView!
+  @IBOutlet private weak var leftTopButton: PKCButton!
+  @IBOutlet private weak var leftBottomButton: PKCButton!
+  @IBOutlet private weak var rightTopButton: PKCButton!
+  @IBOutlet private weak var rightBottomButton: PKCButton!
+  @IBOutlet private weak var topButton: UIButton!
+  @IBOutlet private weak var bottomTopButton: UIButton!
+  @IBOutlet private weak var leftButton: UIButton!
+  @IBOutlet private weak var rightButton: UIButton!
+  @IBOutlet private weak var centerButton: UIButton!
 
-    @IBOutlet private weak var leftTopButton: PKCButton!
-    @IBOutlet private weak var leftBottomButton: PKCButton!
-    @IBOutlet private weak var rightTopButton: PKCButton!
-    @IBOutlet private weak var rightBottomButton: PKCButton!
-    @IBOutlet private weak var topButton: UIButton!
-    @IBOutlet private weak var bottomTopButton: UIButton!
-    @IBOutlet private weak var leftButton: UIButton!
-    @IBOutlet private weak var rightButton: UIButton!
-    @IBOutlet private weak var centerButton: UIButton!
+  @IBOutlet private weak var topConst: NSLayoutConstraint!
+  @IBOutlet private weak var leftConst: NSLayoutConstraint!
+  @IBOutlet private weak var rightConst: NSLayoutConstraint!
+  @IBOutlet private weak var bottomConst: NSLayoutConstraint!
 
+  @IBOutlet private weak var ratioConst: NSLayoutConstraint!
+  @IBOutlet private weak var limitTopConst: NSLayoutConstraint!
+  @IBOutlet private weak var limitLeftConst: NSLayoutConstraint!
+  @IBOutlet private weak var limitRightConst: NSLayoutConstraint!
+  @IBOutlet private weak var limitBottomConst: NSLayoutConstraint!
+  @IBOutlet private weak var minHeightConst: NSLayoutConstraint!
+  @IBOutlet private weak var minWidthConst: NSLayoutConstraint!
 
-    @IBOutlet private weak var topConst: NSLayoutConstraint!
-    @IBOutlet private weak var leftConst: NSLayoutConstraint!
-    @IBOutlet private weak var rightConst: NSLayoutConstraint!
-    @IBOutlet private weak var bottomConst: NSLayoutConstraint!
-
-    private var touchPoint: CGPoint? = nil
-    
-
-    @IBOutlet private weak var ratioConst: NSLayoutConstraint!
-    @IBOutlet private weak var limitTopConst: NSLayoutConstraint!
-    @IBOutlet private weak var limitLeftConst: NSLayoutConstraint!
-    @IBOutlet private weak var limitRightConst: NSLayoutConstraint!
-    @IBOutlet private weak var limitBottomConst: NSLayoutConstraint!
-    
-    @IBOutlet private weak var minHeightConst: NSLayoutConstraint!
-    @IBOutlet private weak var minWidthConst: NSLayoutConstraint!
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        self.commonInitialization()
-    }
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    self.commonInitialization()
+  }
 
   required public init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-        self.commonInitialization()
+    super.init(coder: aDecoder)
+    self.commonInitialization()
+  }
+
+  private func commonInitialization(){
+    self.containerView = Bundle.init(for: PKCCrop.self).loadNibNamed("PKCCropLineView", owner: self, options: nil)?.first as! UIView
+    self.containerView.frame = self.bounds
+    self.containerView.addFullConstraints(self)
+    self.initVars()
+  }
+
+  private func initVars(){
+    self.backgroundColor = .clear
+    self.containerView.backgroundColor = .clear
+    self.lineView.backgroundColor = .clear
+    self.subLineView.backgroundColor = .clear
+
+    self.subLineView.alpha = PKCCropHelper.shared.lineType == .show ? 1 : 0
+
+    if !PKCCropHelper.shared.isCropRate && !PKCCropHelper.shared.isCircle{
+      self.ratioConst.isActive = false
     }
 
-    private func commonInitialization(){
-        self.containerView = Bundle.init(for: PKCCrop.self).loadNibNamed("PKCCropLineView", owner: self, options: nil)?.first as! UIView
-        self.containerView.frame = self.bounds
-        self.containerView.addFullConstraints(self)
-        self.initVars()
+    self.minHeightConst.constant = PKCCropHelper.shared.minSize
+    self.minWidthConst.constant = PKCCropHelper.shared.minSize
+
+    DispatchQueue.main.async{
+      self.leftTopButton.leftTop()
+      self.rightTopButton.rightTop()
+      self.leftBottomButton.leftBottom()
+      self.rightBottomButton.rightBottom()
+    }
+  }
+
+  private func makeMask(){
+    self.layoutIfNeeded()
+    guard let frame = self.superview?.convert(self.lineView.frame, to: nil) else {
+      return
+    }
+    self.delegate?.pkcCropLineMask(CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.width, height: frame.height))
+  }
+
+  public func cropSize() -> CGRect{
+    return self.lineView.frame
+  }
+
+  public func initLineFrame(){
+    if let cropRect = cropFrame {
+      self.leftConst.constant = cropRect.origin.x
+      self.topConst.constant = cropRect.origin.y
+      self.rightConst.constant = frame.width - (cropRect.origin.x + cropRect.width)
+      self.bottomConst.constant = frame.height - (cropRect.origin.y + cropRect.height)
+    } else {
+      let paddingX = (self.frame.width - PKCCropHelper.shared.minSize - 80 - 2)/2
+      let paddingY = (self.frame.height - PKCCropHelper.shared.minSize - 80 - 2)/2
+      self.leftConst.constant = paddingX
+      self.rightConst.constant = paddingX
+      self.topConst.constant = paddingY
+      self.bottomConst.constant = paddingY
+    }
+  }
+
+  public func imageViewSize(_ frame: CGRect){
+    let limitX = frame.origin.x + 2
+    let limitY = frame.origin.y + 2
+
+    self.limitLeftConst.constant = limitX > 0 ? limitX : 2
+    self.limitRightConst.constant = limitX > 0 ? limitX : 2
+    self.limitTopConst.constant = limitY > 0 ? limitY : 2
+    self.limitBottomConst.constant = limitY > 0 ? limitY : 2
+
+    if self.leftConst.constant < self.limitLeftConst.constant - 2{
+      self.leftConst.constant = self.limitLeftConst.constant - 2
+    }
+    if self.rightConst.constant < self.limitRightConst.constant - 2{
+      self.rightConst.constant = self.limitRightConst.constant - 2
+    }
+    if self.topConst.constant < self.limitTopConst.constant - 2{
+      self.topConst.constant = self.limitTopConst.constant - 2
+    }
+    if self.bottomConst.constant < self.limitBottomConst.constant - 2{
+      self.bottomConst.constant = self.limitBottomConst.constant - 2
     }
 
-    private func initVars(){
-        self.backgroundColor = .clear
-        self.containerView.backgroundColor = .clear
-        self.lineView.backgroundColor = .clear
-        self.subLineView.backgroundColor = .clear
-        
-        self.subLineView.alpha = PKCCropHelper.shared.lineType == .show ? 1 : 0
-        
-        if !PKCCropHelper.shared.isCropRate && !PKCCropHelper.shared.isCircle{
-            self.ratioConst.isActive = false
-        }
-
-        self.minHeightConst.constant = PKCCropHelper.shared.minSize
-        self.minWidthConst.constant = PKCCropHelper.shared.minSize
-        
-        DispatchQueue.main.async{
-            self.leftTopButton.leftTop()
-            self.rightTopButton.rightTop()
-            self.leftBottomButton.leftBottom()
-            self.rightBottomButton.rightBottom()
-        }
-    }
-
-
-    private func makeMask(){
-        self.layoutIfNeeded()
-        guard let frame = self.superview?.convert(self.lineView.frame, to: nil) else {
-            return
-        }
-        self.delegate?.pkcCropLineMask(CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.width, height: frame.height))
-    }
-
-    public func cropSize() -> CGRect{
-        return self.lineView.frame
-    }
-
-    public func initLineFrame(){
-        let paddingX = (self.frame.width - PKCCropHelper.shared.minSize - 80 - 2)/2
-        let paddingY = (self.frame.height - PKCCropHelper.shared.minSize - 80 - 2)/2
-        self.leftConst.constant = paddingX
-        self.rightConst.constant = paddingX
-        self.topConst.constant = paddingY
-        self.bottomConst.constant = paddingY
-    }
-
-    public func imageViewSize(_ frame: CGRect){
-        let limitX = frame.origin.x + 2
-        let limitY = frame.origin.y + 2
-        
-        self.limitLeftConst.constant = limitX > 0 ? limitX : 2
-        self.limitRightConst.constant = limitX > 0 ? limitX : 2
-        self.limitTopConst.constant = limitY > 0 ? limitY : 2
-        self.limitBottomConst.constant = limitY > 0 ? limitY : 2
-        
-        if self.leftConst.constant < self.limitLeftConst.constant - 2{
-            self.leftConst.constant = self.limitLeftConst.constant - 2
-        }
-        if self.rightConst.constant < self.limitRightConst.constant - 2{
-            self.rightConst.constant = self.limitRightConst.constant - 2
-        }
-        if self.topConst.constant < self.limitTopConst.constant - 2{
-            self.topConst.constant = self.limitTopConst.constant - 2
-        }
-        if self.bottomConst.constant < self.limitBottomConst.constant - 2{
-            self.bottomConst.constant = self.limitBottomConst.constant - 2
-        }
-        
-        self.makeMask()
-    }
-
-
-
-
-
+    self.makeMask()
+  }
 
   override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if self.leftTopButton.frame.contains(point){
-            return true
-        }else if self.leftBottomButton.frame.contains(point){
-            return true
-        }else if self.rightTopButton.frame.contains(point){
-            return true
-        }else if self.rightBottomButton.frame.contains(point){
-            return true
-        }else if self.topButton.frame.contains(point){
-            return true
-        }else if self.bottomTopButton.frame.contains(point){
-            return true
-        }else if self.leftButton.frame.contains(point){
-            return true
-        }else if self.rightButton.frame.contains(point){
-            return true
-        }else if self.centerButton.frame.contains(point){
-            return true
-        }else{
-            return false
-        }
+    if self.leftTopButton.frame.contains(point){
+      return true
+    }else if self.leftBottomButton.frame.contains(point){
+      return true
+    }else if self.rightTopButton.frame.contains(point){
+      return true
+    }else if self.rightBottomButton.frame.contains(point){
+      return true
+    }else if self.topButton.frame.contains(point){
+      return true
+    }else if self.bottomTopButton.frame.contains(point){
+      return true
+    }else if self.leftButton.frame.contains(point){
+      return true
+    }else if self.rightButton.frame.contains(point){
+      return true
+    }else if self.centerButton.frame.contains(point){
+      return true
+    }else{
+      return false
     }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // - MARK Drag Action
-
-
-
-
-    @IBAction private func touchUpAction(_ sender: UIButton, forEvent event: UIEvent){
-        self.touchPoint = nil
-        if PKCCropHelper.shared.lineType == .default{
-            self.subLineView.alpha = 1
-            UIView.animate(withDuration: 0.3, animations: {
-                self.subLineView.alpha = 0
-            })
-        }
+  // - MARK Drag Action
+  @IBAction private func touchUpAction(_ sender: UIButton, forEvent event: UIEvent){
+    self.touchPoint = nil
+    if PKCCropHelper.shared.lineType == .default{
+      self.subLineView.alpha = 1
+      UIView.animate(withDuration: 0.3, animations: {
+        self.subLineView.alpha = 0
+      })
     }
+  }
 
-    @IBAction private func touchDownAction(_ sender: UIButton, forEvent event: UIEvent){
-        if let touch = event.touches(for: sender)?.first {
-            self.touchPoint = touch.previousLocation(in: self)
-            if PKCCropHelper.shared.lineType == .default{
-                self.subLineView.alpha = 0
-                UIView.animate(withDuration: 0.3, animations: { 
-                    self.subLineView.alpha = 1
-                })
-            }
-        }
+  @IBAction private func touchDownAction(_ sender: UIButton, forEvent event: UIEvent){
+    if let touch = event.touches(for: sender)?.first {
+      self.touchPoint = touch.previousLocation(in: self)
+      if PKCCropHelper.shared.lineType == .default{
+        self.subLineView.alpha = 0
+        UIView.animate(withDuration: 0.3, animations: {
+          self.subLineView.alpha = 1
+        })
+      }
     }
+  }
 
-
-
-
-
-    @IBAction private func centerDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let minusXPoint = currentPoint.x - touchPoint.x
-
-            let topConst = self.topConst.constant + minusYPoint
-            let bottomConst = self.bottomConst.constant - minusYPoint
-            let leftConst = self.leftConst.constant + minusXPoint
-            let rightConst = self.rightConst.constant - minusXPoint
-
-            if topConst >= self.limitTopConst.constant - 2 && bottomConst >= self.limitBottomConst.constant - 2{
-                self.topConst.constant = topConst
-                self.bottomConst.constant = bottomConst
-            }
-            if leftConst >= self.limitLeftConst.constant - 2 && rightConst >= self.limitRightConst.constant - 2{
-                self.leftConst.constant = leftConst
-                self.rightConst.constant = rightConst
-            }
-
-
-//            if topConst >= self.limitTopConst.constant - 2{
-//                self.topConst.constant = topConst
-//                self.bottomConst.constant = bottomConst
-//            }else if bottomConst >= self.limitBottomConst.constant - 2{
-//                self.topConst.constant = topConst
-//                self.bottomConst.constant = bottomConst
-//            }
-//            if rightConst >= self.limitRightConst.constant - 2{
-//                self.leftConst.constant = leftConst
-//                self.rightConst.constant = rightConst
-//            }else if leftConst >= self.limitLeftConst.constant - 2{
-//                self.leftConst.constant = leftConst
-//                self.rightConst.constant = rightConst
-//            }
-
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+  @IBAction private func centerDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    guard let touchPoint = self.touchPoint else {
+      return
     }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
 
-    @IBAction private func topDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
-            return
-        }
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let topConst = self.topConst.constant + minusYPoint
-            let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let minusXPoint = currentPoint.x - touchPoint.x
 
-            if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
-                self.topConst.constant = topConst
-            }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
-                self.topConst.constant = topConst
-            }
-            
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+      let topConst = self.topConst.constant + minusYPoint
+      let bottomConst = self.bottomConst.constant - minusYPoint
+      let leftConst = self.leftConst.constant + minusXPoint
+      let rightConst = self.rightConst.constant - minusXPoint
+
+      if topConst >= self.limitTopConst.constant - 2 && bottomConst >= self.limitBottomConst.constant - 2{
+        self.topConst.constant = topConst
+        self.bottomConst.constant = bottomConst
+      }
+      if leftConst >= self.limitLeftConst.constant - 2 && rightConst >= self.limitRightConst.constant - 2{
+        self.leftConst.constant = leftConst
+        self.rightConst.constant = rightConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
     }
+  }
 
-    @IBAction private func bottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
-            return
-        }
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let bottomConst = self.bottomConst.constant - minusYPoint
-            let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
-
-            if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
-                self.bottomConst.constant = bottomConst
-            }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
-                self.bottomConst.constant = bottomConst
-            }
-            
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+  @IBAction private func topDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
+      return
     }
-
-    @IBAction private func leftDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
-            return
-        }
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let leftConst = self.leftConst.constant + minusXPoint
-            let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
-            
-            if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
-                self.leftConst.constant = leftConst
-            }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
-                self.leftConst.constant = leftConst
-            }
-            
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+    guard let touchPoint = self.touchPoint else {
+      return
     }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
 
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let topConst = self.topConst.constant + minusYPoint
+      let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
 
+      if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
+        self.topConst.constant = topConst
+      }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
+        self.topConst.constant = topConst
+      }
 
-    @IBAction private func rightDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
-            return
-        }
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let rightConst = self.rightConst.constant - minusXPoint
-            let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
-            
-            if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
-                self.rightConst.constant = rightConst
-            }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
-                self.rightConst.constant = rightConst
-            }
-            
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+      self.touchPoint = currentPoint
+      self.makeMask()
     }
+  }
 
-
-    @IBAction private func leftTopDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let topConst = self.topConst.constant + minusYPoint
-            let leftConst = self.leftConst.constant + minusXPoint
-            let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
-            let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
-
-            if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
-                self.topConst.constant = topConst
-            }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
-                self.topConst.constant = topConst
-            }
-
-            if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
-                self.leftConst.constant = leftConst
-            }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
-                self.leftConst.constant = leftConst
-            }
-            
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+  @IBAction private func bottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
+      return
     }
-
-    @IBAction private func rightTopDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let rightConst = self.rightConst.constant - minusXPoint
-            let topConst = self.topConst.constant + minusYPoint
-            let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
-            let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
-            
-            if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
-                self.topConst.constant = topConst
-            }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
-                self.topConst.constant = topConst
-            }
-
-            if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
-                self.rightConst.constant = rightConst
-            }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
-                self.rightConst.constant = rightConst
-            }
-
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+    guard let touchPoint = self.touchPoint else {
+      return
     }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
 
-    @IBAction private func leftBottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let leftConst = self.leftConst.constant + minusXPoint
-            let bottomConst = self.bottomConst.constant - minusYPoint
-            let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
-            let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let bottomConst = self.bottomConst.constant - minusYPoint
+      let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
 
-            if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
-                self.bottomConst.constant = bottomConst
-            }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
-                self.bottomConst.constant = bottomConst
-            }
+      if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
+        self.bottomConst.constant = bottomConst
+      }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
+        self.bottomConst.constant = bottomConst
+      }
 
-            if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
-                self.leftConst.constant = leftConst
-            }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
-                self.leftConst.constant = leftConst
-            }
-
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+      self.touchPoint = currentPoint
+      self.makeMask()
     }
+  }
 
-    @IBAction private func rightBottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
-        guard let touchPoint = self.touchPoint else {
-            return
-        }
-        if let touch = event.touches(for: sender)?.first {
-            let currentPoint = touch.previousLocation(in: self)
-            
-            let minusYPoint = currentPoint.y - touchPoint.y
-            let minusXPoint = currentPoint.x - touchPoint.x
-            let rightConst = self.rightConst.constant - minusXPoint
-            let bottomConst = self.bottomConst.constant - minusYPoint
-            let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
-            let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
-
-            if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
-                self.bottomConst.constant = bottomConst
-            }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
-                self.bottomConst.constant = bottomConst
-            }
-
-            if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
-                self.rightConst.constant = rightConst
-            }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
-                self.rightConst.constant = rightConst
-            }
-
-            self.touchPoint = currentPoint
-            self.makeMask()
-        }
+  @IBAction private func leftDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
+      return
     }
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
 
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let leftConst = self.leftConst.constant + minusXPoint
+      let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
+
+      if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
+        self.leftConst.constant = leftConst
+      }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
+        self.leftConst.constant = leftConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
+
+  @IBAction private func rightDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    if PKCCropHelper.shared.isCircle || PKCCropHelper.shared.isCropRate{
+      return
+    }
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
+
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let rightConst = self.rightConst.constant - minusXPoint
+      let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
+
+      if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
+        self.rightConst.constant = rightConst
+      }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
+        self.rightConst.constant = rightConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
+
+  @IBAction private func leftTopDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
+
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let topConst = self.topConst.constant + minusYPoint
+      let leftConst = self.leftConst.constant + minusXPoint
+      let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
+      let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
+
+      if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
+        self.topConst.constant = topConst
+      }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
+        self.topConst.constant = topConst
+      }
+
+      if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
+        self.leftConst.constant = leftConst
+      }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
+        self.leftConst.constant = leftConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
+
+  @IBAction private func rightTopDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
+
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let rightConst = self.rightConst.constant - minusXPoint
+      let topConst = self.topConst.constant + minusYPoint
+      let limitYConst = (self.bounds.height - (self.bottomConst.constant + topConst +  PKCCropHelper.shared.minSize))
+      let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
+
+      if topConst >= 0 && minusYPoint > 0 && limitYConst > 0{
+        self.topConst.constant = topConst
+      }else if topConst >= 0 && minusYPoint <= 0 && self.limitTopConst.constant <= topConst{
+        self.topConst.constant = topConst
+      }
+
+      if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
+        self.rightConst.constant = rightConst
+      }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
+        self.rightConst.constant = rightConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
+
+  @IBAction private func leftBottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
+
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let leftConst = self.leftConst.constant + minusXPoint
+      let bottomConst = self.bottomConst.constant - minusYPoint
+      let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
+      let limitXConst = (self.bounds.width - (self.rightConst.constant + leftConst +  PKCCropHelper.shared.minSize))
+
+      if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
+        self.bottomConst.constant = bottomConst
+      }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
+        self.bottomConst.constant = bottomConst
+      }
+
+      if leftConst >= 0 && minusXPoint > 0 && limitXConst > 0{
+        self.leftConst.constant = leftConst
+      }else if leftConst >= 0 && minusXPoint <= 0 && self.limitLeftConst.constant <= leftConst{
+        self.leftConst.constant = leftConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
+
+  @IBAction private func rightBottomDragAction(_ sender: UIButton, forEvent event: UIEvent) {
+    guard let touchPoint = self.touchPoint else {
+      return
+    }
+    if let touch = event.touches(for: sender)?.first {
+      let currentPoint = touch.previousLocation(in: self)
+
+      let minusYPoint = currentPoint.y - touchPoint.y
+      let minusXPoint = currentPoint.x - touchPoint.x
+      let rightConst = self.rightConst.constant - minusXPoint
+      let bottomConst = self.bottomConst.constant - minusYPoint
+      let limitYConst = (self.bounds.height - (self.topConst.constant + bottomConst +  PKCCropHelper.shared.minSize))
+      let limitXConst = (self.bounds.width - (self.leftConst.constant + rightConst +  PKCCropHelper.shared.minSize))
+
+      if bottomConst >= 0 && minusYPoint < 0 && limitYConst > 0{
+        self.bottomConst.constant = bottomConst
+      }else if bottomConst >= 0 && minusYPoint >= 0 && self.limitBottomConst.constant <= bottomConst{
+        self.bottomConst.constant = bottomConst
+      }
+
+      if rightConst >= 0 && minusXPoint < 0 && limitXConst > 0{
+        self.rightConst.constant = rightConst
+      }else if rightConst >= 0 && minusXPoint >= 0 && self.limitRightConst.constant <= rightConst{
+        self.rightConst.constant = rightConst
+      }
+
+      self.touchPoint = currentPoint
+      self.makeMask()
+    }
+  }
 }
