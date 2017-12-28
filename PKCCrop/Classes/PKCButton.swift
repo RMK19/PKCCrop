@@ -13,11 +13,11 @@ class PKCButton: UIButton {
     var yView: UIView?
     
     private let maxSize: CGFloat = 36
-    private let minSize: CGFloat = 2
+    private let minSize: CGFloat = 4
     override func awakeFromNib() {
         super.awakeFromNib()
         let xView = UIView(frame: .zero)
-        xView.backgroundColor = .white
+        xView.backgroundColor = UIColor(red: 0.24, green: 0.26, blue: 0.84, alpha: 1.0)
         xView.isUserInteractionEnabled = false
         xView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(xView)
@@ -26,7 +26,7 @@ class PKCButton: UIButton {
         self.xView = xView
         
         let yView = UIView(frame: .zero)
-        yView.backgroundColor = .white
+        yView.backgroundColor = UIColor(red: 0.24, green: 0.26, blue: 0.84, alpha: 1.0)
         yView.isUserInteractionEnabled = false
         yView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(yView)
