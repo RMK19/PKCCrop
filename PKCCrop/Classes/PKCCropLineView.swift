@@ -116,8 +116,8 @@ public class PKCCropLineView: UIView {
       self.rightConst.constant = frame.width - (cropRect.origin.x + cropRect.width)
       self.bottomConst.constant = frame.height - (cropRect.origin.y + cropRect.height)
     } else {
-      let paddingX = (self.frame.width - PKCCropHelper.shared.minSize - 80 - 2)/2
-      let paddingY = (self.frame.height - PKCCropHelper.shared.minSize - 80 - 2)/2
+      let paddingX = (frame.width - (frame.width - 40 - 2))/2
+      let paddingY = (frame.height - (frame.height - 80 - 2))/2
       self.leftConst.constant = paddingX
       self.rightConst.constant = paddingX
       self.topConst.constant = paddingY
