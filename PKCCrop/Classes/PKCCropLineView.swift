@@ -141,10 +141,12 @@ public class PKCCropLineView: UIView {
       self.rightConst.constant = self.limitRightConst.constant - 2
     }
     if self.topConst.constant < self.limitTopConst.constant - 2{
-      self.topConst.constant = self.limitTopConst.constant - 2
+      let padding = self.limitTopConst.constant - 2
+      self.topConst.constant = cropFrame == nil ? padding + 20 : padding
     }
     if self.bottomConst.constant < self.limitBottomConst.constant - 2{
-      self.bottomConst.constant = self.limitBottomConst.constant - 2
+      let padding = self.limitBottomConst.constant - 2
+      self.bottomConst.constant = cropFrame == nil ? padding + 20 : padding
     }
 
     self.makeMask()
